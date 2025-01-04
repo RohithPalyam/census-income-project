@@ -4,11 +4,9 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.svm import SVC
+from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import LabelEncoder, StandardScaler
-from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+from sklearn.metrics import mean_squared_error, confusion_matrix, accuracy_score
 
 # Streamlit app setup
 st.title("Income Classification (>50K Prediction)")
@@ -88,54 +86,31 @@ if adult_df is not None:
     y = adult_df['income']
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    # Initialize models
-    models = {
-        "Logistic Regression": LogisticRegression(max_iter=1000),
-        "K-Nearest Neighbors": KNeighborsClassifier(),
-        "Support Vector Machine": SVC()
-    }
+    # Initialize Linear Regression model
+    model = LinearRegression()
 
-    results = {}
-    for model_name, model in models.items():
-        try:
-            model.fit(X_train, y_train)
-            y_pred = model.predict(X_test)
-            acc = accuracy_score(y_test, y_pred)
-            results[model_name] = {
-                "Accuracy": acc,
-                "Confusion Matrix": confusion_matrix(y_test, y_pred),
-                "Classification Report": classification_report(y_test, y_pred, output_dict=True)
-            }
-            st.write(f"Model: {model_name}")
-            st.write("Accuracy:", acc)
+    try:
+        # Train the model
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
 
-            # Confusion Matrix
-            sns.heatmap(results[model_name]["Confusion Matrix"], annot=True, fmt='d', cmap='Blues', 
-                        xticklabels=['<=50K', '>50K'], yticklabels=['<=50K', '>50K'])
-            plt.title(f'{model_name} Confusion Matrix')
-            st.pyplot(plt)
+        # Convert continuous predictions to binary (0 or 1)
+        y_pred_binary = [1 if i >= 0.5 else 0 for i in y_pred]
 
-        except Exception as e:
-            st.error(f"Error training {model_name}: {e}")
+        # Evaluate the model
+        acc = accuracy_score(y_test, y_pred_binary)
+        mse = mean_squared_error(y_test, y_pred)
+        cm = confusion_matrix(y_test, y_pred_binary)
 
-    # 5. Model Comparison
-    st.header("5. Model Comparison")
+        st.write(f"Accuracy: {acc}")
+        st.write(f"Mean Squared Error: {mse}")
+        st.write("Confusion Matrix:")
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=['<=50K', '>50K'], yticklabels=['<=50K', '>50K'])
+        plt.title('Confusion Matrix')
+        st.pyplot(plt)
 
-    comparisons = []
-    for model_name, metrics in results.items():
-        precision = metrics["Classification Report"]["1"]["precision"]
-        recall = metrics["Classification Report"]["1"]["recall"]
-        f1 = metrics["Classification Report"]["1"]["f1-score"]
-        comparisons.append((model_name, metrics["Accuracy"], precision, recall, f1))
+    except Exception as e:
+        st.error(f"Error training the model: {e}")
 
-    st.write("Model Comparison:")
-    comparison_df = pd.DataFrame(comparisons, columns=["Model", "Accuracy", "Precision", "Recall", "F1 Score"])
-    st.dataframe(comparison_df)
-
-    if not comparison_df.empty:
-        best_model = comparison_df.sort_values(by="Accuracy", ascending=False).iloc[0]
-        st.write(f"Best Model: {best_model['Model']} with Accuracy: {best_model['Accuracy']}")
-    else:
-        st.warning("No models were successfully trained.")
 else:
     st.error("Unable to load or process the dataset.")
