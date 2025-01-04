@@ -15,14 +15,13 @@ st.title("Income Classification (>50K Prediction)")
 
 # 1. Load and preprocess the dataset
 st.header("1. Load and Preprocess the Data")
-# Load dataset
-@st.cache
-def load_data():
-    return pd.read_csv("adult.csv")
+try:
+    # Load dataset
+    adult_df = pd.read_csv("adult.csv")
+except Exception as e:
+    st.error(f"Error loading the dataset: {e}")
 
-adult_df = load_data()
-
-# Preprocess the dataset
+# Data cleaning
 adult_df.columns = adult_df.columns.str.strip().str.lower().str.replace("-", "_")
 adult_df.replace(" ?", np.nan, inplace=True)
 adult_df.dropna(inplace=True)
